@@ -2,6 +2,13 @@ using UnityEngine;
 
 [RequireComponent(typeof(LineRenderer), typeof(BoxCollider2D))]
 public class BoundaryCollider : MonoBehaviour
+/*
+* A script that creates a BoxCollider2D based on the first two points of a LineRenderer.
+* Used to dynamically create boundaries for our game board. Should set it just off the visible screen
+* and off the ground. 
+* Author: Parker Clark
+*/
+
 {
     private LineRenderer lineRenderer;
     private BoxCollider2D boxCollider;
