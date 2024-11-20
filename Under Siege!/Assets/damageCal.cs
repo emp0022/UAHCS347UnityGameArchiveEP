@@ -80,7 +80,7 @@ public class damageCal : MonoBehaviour
     }
 
     // Update the material properties based on the selected material type
-    private void UpdateMaterialProperties()
+    public void UpdateMaterialProperties()
     {
         if (meshRenderer == null)
             meshRenderer = GetComponent<MeshRenderer>();
@@ -306,4 +306,11 @@ public class damageCal : MonoBehaviour
         debrisPiece.stoneMaterial = stoneMaterial;
         debrisPiece.explosionForce = explosionForce;
     }
+
+    public void SetMaterialType(MaterialType newMaterialType)
+{
+    materialType = newMaterialType;
+    UpdateMaterialProperties();
+}
+    
 }

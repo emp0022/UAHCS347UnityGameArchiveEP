@@ -5,6 +5,11 @@ TagManager:
   serializedVersion: 2
   tags:
   - Boundary
+  - BottomBoundary
+  - Button_Wall
+  - Button_Slab
+  - Button_Square
+  - Dropdown_Material
   layers:
   - Default
   - TransparentFX
@@ -12,7 +17,7 @@ TagManager:
   - 
   - Water
   - UI
-  - 
+  - Boundary
   - 
   - 
   - 
