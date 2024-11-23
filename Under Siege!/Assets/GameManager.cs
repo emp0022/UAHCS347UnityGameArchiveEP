@@ -28,7 +28,8 @@ public class GameManager : MonoBehaviour
     // UI element for displaying build-centric buttons
     public GameObject buildUI;
 
-    // TODO: Might need to add attack phasing in here too
+    // Instantiate shot object
+    public Shot cannonShot;
 
     // Start is called before the first frame update
     void Start()
@@ -79,8 +80,10 @@ public class GameManager : MonoBehaviour
         * Stub for helper function to begin the attack on the base.
         */
 
-        // Logic to begin enemy attack
         Debug.Log("Attack Phase Active!");
+
+        // Call the cannon to shoot
+        cannonShot.ShootShot();
     }
 
     public void OnDefendButtonClicked()
