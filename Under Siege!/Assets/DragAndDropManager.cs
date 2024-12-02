@@ -1,70 +1,101 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using TMPro;
+using System.Collections;
+using System.Collections.Generic;
 
+/* 
+ * 
+ * Author: Parker Clark
+ */
+
+
+/* 
+ * Evan Pagani CS347 Project: Under Siege!
+ * Added polish to Parker's original implementations
+ * Added deleteZone implementation, deleteZone alpha highlight, and budget
+ */
 public class DragAndDropManager : MonoBehaviour
 {
-    /*
-    * A script for the drag and drop functionality/placing building objects.
-    * This script handles the instantiation of building objects, setting their material type, and placing them in the scene.
-    * It also listens for changes to the material dropdown and updates the current materiat using the GlobalMaterialManager.
-    *
-    * Author: Parker Clark
-    */
+    public GameObject wallPrefab = null;
+    public GameObject slabPrefab = null;
+    public GameObject squarePrefab = null;
+    public GameObject trianglePrefab = null;
+    private GameObject currentDraggedObject = null;
+    private Camera mainCamera = null;
+    private Vector3 mouseOffset = Vector3.zero;
 
-    // Prefab objects for spawning walls, slabs, and squares
-    public GameObject wallPrefab;
-    public GameObject slabPrefab;
-    public GameObject squarePrefab;
+    public LayerMask deleteZoneLayer; // Layer mask for delete zones
 
-    // Reference to the currently dragged object
-    private GameObject currentDraggedObject;
+    private BudgetManager budgetManager;
 
-    // Main camera to use for dragging math
-    private Camera mainCamera;
-
-    // Maintain a mouse offset for dragging objects
-    private Vector3 mouseOffset;
+    private List<Renderer> deleteZoneRenderers = new List<Renderer>();
+    private List<Collider> deleteZoneColliders = new List<Collider>();
+    private List<Material> deleteZoneMaterials = new List<Material>();
+    private List<Color> deleteZoneInitialColors = new List<Color>();
+    private List<bool> isDeleteZoneHighlighted = new List<bool>();
 
     private void Start()
-    { 
-        /*
-        * Setup operations before first frame update.
-        */
-
-        // Get the main camera
+    {
         mainCamera = Camera.main;
 
-        // Add event listeners to buttons, passing in the prefab to instantiate
-        // There is a better way to do this (e.g., using a dictionary), but im tired and this works
+        budgetManager = FindObjectOfType<BudgetManager>();
+        if (budgetManager == null)
+        {
+            Debug.LogError("BudgetManager not found in the scene!");
+        }
+
         AddEventTrigger(GameObject.FindWithTag("Button_Wall"), wallPrefab);
         AddEventTrigger(GameObject.FindWithTag("Button_Slab"), slabPrefab);
         AddEventTrigger(GameObject.FindWithTag("Button_Square"), squarePrefab);
+        AddEventTrigger(GameObject.FindWithTag("Button_Triangle"), trianglePrefab);
 
-        // Add event listener to the material dropdown
         TMP_Dropdown materialDropdown = GameObject.FindWithTag("Dropdown_Material").GetComponent<TMP_Dropdown>();
-        materialDropdown.onValueChanged.AddListener(OnMaterialChanged);
+        if (materialDropdown != null)
+        {
+            materialDropdown.onValueChanged.AddListener(OnMaterialChanged);
+        }
+
+        // Ensure the deleteZoneLayer is set
+        if (deleteZoneLayer == 0)
+        {
+            deleteZoneLayer = LayerMask.GetMask("DeleteZone");
+        }
+
+        // Find all delete zones in the scene on the DeleteZone layer
+        GameObject[] deleteZoneObjects = FindObjectsOfType<GameObject>();
+        foreach (GameObject obj in deleteZoneObjects)
+        {
+            if (((1 << obj.layer) & deleteZoneLayer) != 0)
+            {
+                Renderer renderer = obj.GetComponent<Renderer>();
+                Collider collider = obj.GetComponent<Collider>();
+                if (renderer != null && collider != null)
+                {
+                    renderer.enabled = false; // Initially disable renderer
+                    deleteZoneRenderers.Add(renderer);
+                    deleteZoneColliders.Add(collider);
+
+                    Material material = renderer.material; // Creates an instance of the material
+                    deleteZoneMaterials.Add(material);
+                    deleteZoneInitialColors.Add(material.color);
+
+                    isDeleteZoneHighlighted.Add(false);
+                }
+            }
+        }
     }
 
     private void AddEventTrigger(GameObject button, GameObject prefab)
-    { 
-        /*
-        * Add an EventTrigger component to a button and register PointerDown and PointerUp events.
-        * This function is used to add drag and drop functionality to the building buttons.
-        *
-        * Parameters:
-        * button: The button to add the EventTrigger to
-        * prefab: The prefab to instantiate when the button is clicked
-        */
+    {
+        if (button == null || prefab == null) return;
 
-        // Add an EventTrigger component to the button if it doesn't already have one
         EventTrigger trigger = button.GetComponent<EventTrigger>();
         if (trigger == null)
         {
             trigger = button.AddComponent<EventTrigger>();
         }
 
-        // Register the PointerDown and make a new event entry, pass in prefab to spawn
         EventTrigger.Entry pointerDownEntry = new EventTrigger.Entry
         {
             eventID = EventTriggerType.PointerDown
@@ -72,7 +103,6 @@ public class DragAndDropManager : MonoBehaviour
         pointerDownEntry.callback.AddListener((data) => { OnPointerDown((PointerEventData)data, prefab); });
         trigger.triggers.Add(pointerDownEntry);
 
-        // Register the PointerDown and make a new event entry
         EventTrigger.Entry pointerUpEntry = new EventTrigger.Entry
         {
             eventID = EventTriggerType.PointerUp
@@ -82,42 +112,36 @@ public class DragAndDropManager : MonoBehaviour
     }
 
     private void OnPointerDown(PointerEventData data, GameObject prefab)
-    {   
-        /*
-        * Instantiate a building object when a button is clicked and start dragging it.
-        * Assumes the user clicked and is holding left click.
-        *
-        * Parameters:
-        * data: The PointerEventData from the event trigger
-        * prefab: The prefab to instantiate
-        */
+    {
+        // Check if the budget is exceeded
+        if (budgetManager != null && budgetManager.isBudgetExceeded)
+        {
+            Debug.Log("Cannot place new pieces. Budget is exceeded.");
+            return;
+        }
 
-        // Destroy the current dragged object if it exists
         if (currentDraggedObject != null)
         {
             Destroy(currentDraggedObject);
         }
 
-        // Spawn the object and set to currentDraggedObject
         currentDraggedObject = Instantiate(prefab);
-
-        // Set the object's position to the mouse position
-        // Have to set Z to 0, otherwise the prefab spawns behind the background
         Vector3 spawnPosition = GetMouseWorldPosition();
-        spawnPosition.z = 0; // Set Z position to 0 for 2D
-        currentDraggedObject.transform.position = spawnPosition;
 
-        // Disable physics interactions while dragging
-        Rigidbody rb = currentDraggedObject.GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            rb.isKinematic = true;
-        }
-
-        // Set the damage component material type
+        // Get the damageCal component to check the structure type
         damageCal damageComponent = currentDraggedObject.GetComponent<damageCal>();
         if (damageComponent != null)
         {
+            // Set z position based on structure type
+            if (damageComponent.structureType == StructureType.RightTriangle)
+            {
+                spawnPosition.z = 0.5f; // Set z to 0.5 for triangles; they spawn weird
+            }
+            else
+            {
+                spawnPosition.z = 0f; // Default z position for other structures
+            }
+
             damageComponent.SetMaterialType(GlobalMaterialManager.CurrentMaterialType);
             Debug.Log("Material type set to: " + GlobalMaterialManager.CurrentMaterialType);
         }
@@ -126,74 +150,259 @@ public class DragAndDropManager : MonoBehaviour
             Debug.LogError("damageCal component not found on the instantiated object!");
         }
 
-        // Calculate the mouse offset for dragging
+        currentDraggedObject.transform.position = spawnPosition;
+
+        Rigidbody rb = currentDraggedObject.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+        }
+
+        Collider collider = currentDraggedObject.GetComponent<Collider>();
+        if (collider != null)
+        {
+            collider.enabled = false;
+        }
+
         mouseOffset = currentDraggedObject.transform.position - GetMouseWorldPosition();
+
+        // Enable delete zones
+        SetDeleteZonesVisibility(true);
     }
 
     private void OnPointerUp(PointerEventData data)
     {
-        /*
-        * Stop dragging the object and place it in the scene. Re-enable physics interactions.
-        * Assumes the user is no longer holding left click.
-        *
-        * Parameters:
-        * data: The PointerEventData from the event trigger
-        */
 
-        // Set the current dragged object to null if it exists
+
+        if (budgetManager != null && budgetManager.isBudgetExceeded)
+        {
+            Debug.Log("Cannot place new pieces. Budget is exceeded.");
+            Destroy(currentDraggedObject);
+            return;
+        }
+
         if (currentDraggedObject != null)
-        {   
-            // Re-enable physics interactions when placed
+        {
+            // Check if the object is over a delete zone
+            if (IsOverAnyDeleteZone(currentDraggedObject))
+            {
+                Destroy(currentDraggedObject);
+                currentDraggedObject = null;
+
+                // Disable delete zones
+                SetDeleteZonesVisibility(false);
+
+                return;
+            }
+
             Rigidbody rb = currentDraggedObject.GetComponent<Rigidbody>();
             if (rb != null)
             {
                 rb.isKinematic = false;
             }
 
+            Collider collider = currentDraggedObject.GetComponent<Collider>();
+            if (collider != null)
+            {
+                collider.enabled = true;
+            }
+
             currentDraggedObject = null;
+
+            // Disable delete zones
+            SetDeleteZonesVisibility(false);
+        }
+    }
+
+    private bool IsOverAnyDeleteZone(GameObject obj)
+    {
+        Collider objCollider = obj.GetComponent<Collider>();
+        if (objCollider == null)
+            return false;
+
+        foreach (Collider deleteZoneCollider in deleteZoneColliders)
+        {
+            if (objCollider.bounds.Intersects(deleteZoneCollider.bounds))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void WakeUpAllRigidbodies()
+    {
+        Rigidbody[] allRigidbodies = FindObjectsOfType<Rigidbody>();
+        foreach (Rigidbody rb in allRigidbodies)
+        {
+            rb.WakeUp();
         }
     }
 
     private void Update()
-    {   
-        /*
-        * Update is called once per frame. Used to update the position of the dragged object.
-        */
-
-        // Update the position of the dragged object if it exists
+    {
         if (currentDraggedObject != null)
-        {   
-            // Once again, set Z to 0 for 2D, unless you want the object to magically disappear
+        {
             Vector3 mousePosition = GetMouseWorldPosition() + mouseOffset;
-            mousePosition.z = 0;
             currentDraggedObject.transform.position = mousePosition;
+
+            Collider objCollider = currentDraggedObject.GetComponent<Collider>();
+            if (objCollider != null)
+            {
+                for (int i = 0; i < deleteZoneColliders.Count; i++)
+                {
+                    Collider deleteZoneCollider = deleteZoneColliders[i];
+                    Material deleteZoneMaterial = deleteZoneMaterials[i];
+                    Color initialColor = deleteZoneInitialColors[i];
+
+                    bool isOverDeleteZone = objCollider.bounds.Intersects(deleteZoneCollider.bounds);
+
+                    if (isOverDeleteZone)
+                    {
+                        if (!isDeleteZoneHighlighted[i])
+                        {
+                            // Increase the alpha of the delete zone's material
+                            SetDeleteZoneAlpha(deleteZoneMaterial, 0.25f); // Highlight Alpha; currently set to %25
+                            isDeleteZoneHighlighted[i] = true;
+                        }
+                    }
+                    else
+                    {
+                        if (isDeleteZoneHighlighted[i])
+                        {
+                            // Reset the alpha of the delete zone's material
+                            SetDeleteZoneAlpha(deleteZoneMaterial, initialColor.a);
+                            isDeleteZoneHighlighted[i] = false;
+                        }
+                    }
+                }
+            }
+        }
+       
+        // Handle picking up existing objects
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (currentDraggedObject == null)
+            {
+                // Check if the game is in ATTACK phase
+                if (GameManager.Instance != null && GameManager.Instance.currentPhase == GameManager.GamePhase.ATTACK)
+                {
+                    // Do not allow draggable objects
+                    return;
+                }
+
+                    // Perform a raycast into the scene
+                    Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+                    RaycastHit hit;
+                int layerMask = ~deleteZoneLayer.value; // Inverts to exclude the delete zone layer
+                if (Physics.Raycast(ray, out hit, Mathf.Infinity, layerMask))
+                {
+                    // Check if the object has the damageCal component
+                    damageCal damageComponent = hit.collider.GetComponent<damageCal>();
+                        if (damageComponent != null)
+                        {
+                            // Start dragging this object
+                            currentDraggedObject = hit.collider.gameObject;
+
+                            // Disable physics and collider
+                            Rigidbody rb = currentDraggedObject.GetComponent<Rigidbody>();
+                            if (rb != null)
+                            {
+                                rb.isKinematic = true;
+                                WakeUpAllRigidbodies();
+                            }
+
+                            Collider collider = currentDraggedObject.GetComponent<Collider>();
+                            if (collider != null)
+                            {
+                                collider.enabled = false;
+                            }
+
+                            mouseOffset = currentDraggedObject.transform.position - GetMouseWorldPosition();
+
+                            // Enable delete zones
+                            SetDeleteZonesVisibility(true);
+                        }
+                    }
+                
+            }
+        }
+
+        // Handle releasing the object
+        if (Input.GetMouseButtonUp(0) && currentDraggedObject != null)
+        {
+            // Check if the object is over a delete zone
+            if (IsOverAnyDeleteZone(currentDraggedObject))
+            {
+                Destroy(currentDraggedObject);
+                currentDraggedObject = null;
+
+                // Disable delete zones
+                SetDeleteZonesVisibility(false);
+
+                return;
+            }
+
+            // Reenable physics and collider
+            Rigidbody rb = currentDraggedObject.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+            }
+
+            Collider collider = currentDraggedObject.GetComponent<Collider>();
+            if (collider != null)
+            {
+                collider.enabled = true;
+            }
+
+            currentDraggedObject = null;
+
+            // Disable delete zones
+            SetDeleteZonesVisibility(false);
+        }
+    }
+
+    private void SetDeleteZonesVisibility(bool visible)
+    {
+        for (int i = 0; i < deleteZoneRenderers.Count; i++)
+        {
+            Renderer renderer = deleteZoneRenderers[i];
+            Material material = deleteZoneMaterials[i];
+            Color initialColor = deleteZoneInitialColors[i];
+
+            if (renderer != null)
+            {
+                renderer.enabled = visible;
+                // Reset the alpha when visibility changes
+                if (!visible)
+                {
+                    SetDeleteZoneAlpha(material, initialColor.a);
+                    isDeleteZoneHighlighted[i] = false;
+                }
+            }
+        }
+    }
+
+    private void SetDeleteZoneAlpha(Material material, float alpha)
+    {
+        if (material != null)
+        {
+            Color color = material.color;
+            color.a = alpha;
+            material.color = color;
         }
     }
 
     private Vector3 GetMouseWorldPosition()
-    {   
-        /*
-        * Get the mouse position in world space.
-        *
-        * Returns:
-        * The mouse position in world space
-        */
-
-        // Get the mouse position and set Z to near clip plane
+    {
         Vector3 mousePosition = Input.mousePosition;
-        mousePosition.z = mainCamera.nearClipPlane;
         return mainCamera.ScreenToWorldPoint(mousePosition);
     }
 
     private void OnMaterialChanged(int index)
-    {   
-        /*
-        * Event listener for the material dropdown. Updates the current material type using the GlobalMaterialManager.
-        *
-        * Parameters:
-        * index: The index of the selected dropdown item
-        */
-        
+    {
         GlobalMaterialManager.CurrentMaterialType = (MaterialType)index;
         Debug.Log("Material changed to: " + GlobalMaterialManager.CurrentMaterialType);
     }

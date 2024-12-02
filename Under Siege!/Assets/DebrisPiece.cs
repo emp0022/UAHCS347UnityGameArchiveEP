@@ -25,10 +25,35 @@ public class DebrisPiece : MonoBehaviour
     public float explosionForce; // Force applied to debris explosion
 
     private bool isDestroyed = false; // Flag to determine if the debris is already destroyed
+    private float parentMass; // Store the mass of the parent debris
+    private float parentVolume; // Store the volume of the parent debris
 
     private void Start()
     {
         InitializeHealth(); // Initialize the health of the debris based on its split level
+
+        // Calculate and store the debris volume and mass
+        MeshFilter meshFilter = GetComponent<MeshFilter>();
+        if (meshFilter != null && meshFilter.sharedMesh != null)
+        {
+            parentVolume = CalculateMeshVolume(meshFilter.sharedMesh);
+        }
+        else
+        {
+            Debug.LogError("Debris piece does not have a valid MeshFilter or mesh.");
+            parentVolume = 1f; // Default volume if calculation fails
+        }
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            parentMass = rb.mass;
+        }
+        else
+        {
+            // Set default mass if Rigidbody is missing
+            parentMass = materialType == MaterialType.Wood ? 2f : 10f;
+        }
     }
 
     // Initialize the health of the debris
@@ -130,18 +155,52 @@ public class DebrisPiece : MonoBehaviour
     {
         if (debris == null) return;
 
-        // Set the name of the debris based on material type, structure type, and split level
         string materialName = materialType == MaterialType.Wood ? "Wood" : "Stone";
-        string structureName = structureType == StructureType.Wall ? "Wall" :
-                               structureType == StructureType.Square ? "Square" : "Slab";
+        string structureName = "";
+
+        switch (structureType)
+        {
+            case StructureType.Wall:
+                structureName = "Wall";
+                break;
+            case StructureType.Square:
+                structureName = "Square";
+                break;
+            case StructureType.Slab:
+                structureName = "Slab";
+                break;
+            case StructureType.RightTriangle:
+                structureName = "RightTriangle";
+                break;
+            default:
+                structureName = "Unknown";
+                break;
+        }
+
         debris.name = $"{materialName}_{structureName}_Debris_Level_{splitLevel + 1}";
 
         AdjustDebrisPosition(debris);
         AddCollider(debris);
         Rigidbody debrisRigidbody = AddRigidbody(debris);
+
+        // Calculate the mass based on the volume ratio
+        MeshFilter debrisMeshFilter = debris.GetComponent<MeshFilter>();
+        if (debrisMeshFilter != null && debrisMeshFilter.sharedMesh != null)
+        {
+            float debrisVolume = CalculateMeshVolume(debrisMeshFilter.sharedMesh);
+            float volumeRatio = debrisVolume / parentVolume;
+            float debrisMass = parentMass * volumeRatio;
+            SetDebrisRigidbodyProperties(debrisRigidbody, debrisMass);
+        }
+        else
+        {
+            Debug.LogError("Debris piece does not have a valid MeshFilter or mesh.");
+            Destroy(debris);
+            return;
+        }
+
         AssignMaterial(debris);
         AddDebrisPieceComponent(debris);
-
         ApplyExplosionForce(debrisRigidbody);
     }
 
@@ -175,26 +234,39 @@ public class DebrisPiece : MonoBehaviour
     private Rigidbody AddRigidbody(GameObject debris)
     {
         Rigidbody rb = debris.AddComponent<Rigidbody>();
-
-        if (materialType == MaterialType.Wood)
-        {
-            SetRigidbodyProperties(rb, mass: 2f, drag: 0.1f, angularDrag: 0.15f);
-        }
-        else if (materialType == MaterialType.Stone)
-        {
-            SetRigidbodyProperties(rb, mass: 10f, drag: 0.1f, angularDrag: 1f);
-        }
-
-        rb.constraints = RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY; // lock to 2d grid
         return rb;
     }
 
-    // Set properties for Rigidbody
-    private void SetRigidbodyProperties(Rigidbody rb, float mass, float drag, float angularDrag)
+    // Set Rigidbody properties for the debris pieces
+    private void SetDebrisRigidbodyProperties(Rigidbody rb, float mass)
     {
+        if (rb == null) return;
+
+        // Set mass based on calculated value
         rb.mass = mass;
-        rb.drag = drag;
-        rb.angularDrag = angularDrag;
+
+        // Set drag and angular drag based on material type
+        switch (materialType)
+        {
+            case MaterialType.Wood:
+                rb.drag = 0.1f;
+                rb.angularDrag = 0.15f;
+                break;
+            case MaterialType.Stone:
+                rb.drag = 0.1f;
+                rb.angularDrag = 1f;
+                break;
+        }
+
+        switch (structureType)
+        {
+            case StructureType.RightTriangle:
+                rb.constraints = RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+                break;
+            default:
+                rb.constraints = RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY;
+                break;
+        }
     }
 
     // Assign appropriate material to the debris piece
@@ -228,8 +300,34 @@ public class DebrisPiece : MonoBehaviour
     private void ApplyExplosionForce(Rigidbody rb)
     {
         Vector3 explosionDirection = (rb.transform.position - transform.position).normalized;
-        explosionDirection.z = 0;
-
         rb.AddForce(explosionDirection * explosionForce, ForceMode.Impulse);
+    }
+
+    // Calculate the volume of a mesh
+    private float CalculateMeshVolume(Mesh mesh)
+    {
+        float volume = 0f;
+        Vector3[] vertices = mesh.vertices;
+        int[] triangles = mesh.triangles;
+
+        // Transform vertices to world space
+        Matrix4x4 localToWorld = transform.localToWorldMatrix;
+
+        for (int i = 0; i < triangles.Length; i += 3)
+        {
+            Vector3 p1 = localToWorld.MultiplyPoint3x4(vertices[triangles[i]]);
+            Vector3 p2 = localToWorld.MultiplyPoint3x4(vertices[triangles[i + 1]]);
+            Vector3 p3 = localToWorld.MultiplyPoint3x4(vertices[triangles[i + 2]]);
+
+            volume += SignedVolumeOfTriangle(p1, p2, p3);
+        }
+
+        return Mathf.Abs(volume);
+    }
+
+    // Calculate the signed volume of a triangle
+    private float SignedVolumeOfTriangle(Vector3 p1, Vector3 p2, Vector3 p3)
+    {
+        return Vector3.Dot(Vector3.Cross(p1, p2), p3) / 6f;
     }
 }

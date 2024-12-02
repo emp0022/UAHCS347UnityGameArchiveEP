@@ -4,5 +4,38 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/MenuScreen.unity
+    guid: 9cb3a5248a0107a42b11c2d4f5dce44c
+  - enabled: 1
+    path: Assets/Scenes/LevelSelection.unity
+    guid: c03ba13f08417fe419707dd2e82ea8ac
+  - enabled: 1
+    path: Assets/Scenes/_LEVEL1.unity
+    guid: 9fc0d4010bbf28b4594072e72b8655ab
+  - enabled: 1
+    path: Assets/Scenes/_LEVEL2.unity
+    guid: a08917832bd51ba4d8f9b45ff7726bda
+  - enabled: 1
+    path: Assets/Scenes/_LEVEL3.unity
+    guid: a5a677e1e1b2de44eb9e8383c155621b
+  - enabled: 1
+    path: Assets/Scenes/_LEVEL4.unity
+    guid: ac1b87b9caaf72a4e9046ea5a6a965d8
+  - enabled: 1
+    path: Assets/Scenes/_LEVEL5.unity
+    guid: a4da64cd7cdf61a4e85259362e000706
+  - enabled: 1
+    path: Assets/Scenes/_LEVEL6.unity
+    guid: 082f80019ebd3614b99b9a92f932c574
+  - enabled: 1
+    path: Assets/Scenes/_LEVEL7.unity
+    guid: 8b299793168a29141a3b99c348f8b2ee
+  - enabled: 1
+    path: Assets/Scenes/_LEVEL8.unity
+    guid: f01bf694cd8d3fb4d9fd07dab6697e7a
+  - enabled: 1
+    path: Assets/Scenes/TutorialWalkthrough.unity
+    guid: d6422f963655fe64e9e6625acbd4ba09
   m_configObjects: {}

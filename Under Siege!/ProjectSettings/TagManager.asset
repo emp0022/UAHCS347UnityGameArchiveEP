@@ -10,6 +10,22 @@ TagManager:
   - Button_Slab
   - Button_Square
   - Dropdown_Material
+  - WelcomeMsg
+  - GameGoalMsg
+  - MaterialSelectMsg
+  - BlockSelectMsg
+  - SetupMsg
+  - ReturnLevelSelectMsg
+  - Ground
+  - BaseComponent
+  - BuildToolbar
+  - Button_Defend
+  - Panel_Lose
+  - Button_Restart
+  - Goal
+  - Cannon
+  - Button_Triangle
+  - BuildingPiece
   layers:
   - Default
   - TransparentFX
@@ -19,8 +35,8 @@ TagManager:
   - UI
   - Boundary
   - NoCollision
-  - 
-  - 
+  - Platform
+  - DeleteZone
   - 
   - 
   - 
