@@ -23,19 +23,19 @@ This repository hosts the full history and assets of the game I built in CS347 a
 
 ## Screenshots and Demos
 ### Main Menu  
-![Main Menu](mainmenu.png)  
+![Main Menu](docs/images/mainmenu.png)  
 
 ### Level Select Screen  
-![Level Select](levelselect.png)  
+![Level Select](docs/images/levelselect.png)  
 
 ### 3d view from early development  
-![3d view from early development](devimg1.png)  
+![3d view from early development](docs/images/devimg1.png)  
 
 ### Level 8: Demo of building mode  
-![Level 8 House](lvl8house.png)  
+![Level 8 House](docs/images/lvl8house.png)  
 
 ### Gameplay Showcase 1  
-![Gameplay Showcase 1 ](showcase1.gif)  
+![Gameplay Showcase 1](docs/images/showcase1.gif)  
 
 ### Gameplay Showcase 2  
-![Gameplay Showcase 1 ](showcase2.gif)  
+![Gameplay Showcase 2](docs/images/showcase2.gif)  
