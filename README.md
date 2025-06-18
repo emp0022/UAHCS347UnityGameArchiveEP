@@ -10,15 +10,15 @@ This repository hosts the full history and assets of the game I built in CS347 a
 - **Inverse Angry Birds:** Build and defend instead of destroy.  
 - **Runtime Debris:** Watch your defenses crumble dynamically with two types of material physics.  
 - **Creative Level Design:** Eight progressively challenging stages, from simple cannonfire to difficult and destructive barrages.
-- **Simple visual style:** Reminiscent style that imitates flash games of old.
-- **Build and attack mode:** In the build phase, the player must build within the budget and space constraints; The attack phase tests this player's structure against cannon fire.
+- **Simple Visual Style:** Reminiscent style that imitates flash games of old.
 ---
 
 ##  Features
 
-- **Defensive Gameplay** – Strategically build in order to defend. The build phase allows the player to add and delete pieces within the budget; The attack phase shows how their defenses held up.
-- **Debris Physics** – Each impact generates debris in real time. Each piece of debris can be further split into smaller pieces.  
-- **Materials** – Wood and stone behave differently as materials: Wood is cheap but easily splinters; stone is tough but is expensive.
+- **Defensive Gameplay:** Strategically build in order to defend. The build phase allows the player to add and delete pieces within the budget; The attack phase shows how their defenses held up.
+- **Debris Physics:** Each impact generates debris in real time. Each piece of debris can be further split into smaller pieces.  
+- **Materials:** Wood and stone behave differently as materials: Wood is cheap but easily splinters; stone is tough but is expensive.
+- **Building Pieces:** The player can build their defenses out of walls, slabs, squares, and triangles of varying material types. 
 
 ---
 
