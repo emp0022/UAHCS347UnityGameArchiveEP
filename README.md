@@ -1,7 +1,7 @@
 
 > An archive of the Unity game team project for CS347 at UAH.
 
-This repository hosts the full history and assets of the game I built in CS347 as the original repo was privated by a teammate. Instead of playing as the attacker like in Angry Birds, **you defend** against incoming cannon fire
+This repository hosts the full history and assets of the game I built in CS347 as the original repo was privated by a teammate. Instead of playing as the attacker like in Angry Birds, **you defend** against incoming cannon fire.
 
 ---
 
