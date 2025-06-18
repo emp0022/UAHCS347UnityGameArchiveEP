@@ -36,7 +36,7 @@ This repository hosts the full history and assets of the game I built in CS347 a
 ![Level 8 House](docs/images/lvl8house.png)  
 
 ### Gameplay Showcase 1  
-![Gameplay Showcase 1](docs/images/showcase1.gif)  
+![Gameplay Showcase 1 (sped up 1000%)](docs/images/showcase1.gif)  
 
 ### Gameplay Showcase 2  
 ![Gameplay Showcase 2](docs/images/showcase2.gif)  
